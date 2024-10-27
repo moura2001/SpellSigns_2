@@ -13,7 +13,7 @@ google-pasta
 grpcio
 gunicorn
 h5py
-huggingface-hub
+huggingface_hub
 idna
 itsdangerous
 Jinja2

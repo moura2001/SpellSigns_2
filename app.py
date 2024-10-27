@@ -22,10 +22,18 @@ from nltk.tokenize import word_tokenize
 import string
 from collections import namedtuple
 import consts
+from huggingface_hub import login, hf_hub_download
+import tensorflow as tf
 
+login("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")  # Replace with your actual token
 
-arabic_model = load_model('C:/Users/gsags/Downloads/arabic_model.h5')
-english_model = load_model('C:/Users/gsags/Downloads/english_model.h5')
+arabic_model_path = hf_hub_download(repo_id="mourasaber2001/SpellSigns", filename="arabic_model.h5",use_auth_token=True
+)
+english_model_path = hf_hub_download(repo_id="mourasaber2001/SpellSigns", filename="english_model.h5",use_auth_token=True
+)
+
+arabic_model = load_model(arabic_model_path)
+english_model = load_model(english_model_path)
 
 
 arabic_encoder = joblib.load("./models/arabic_encoder.pkl")
