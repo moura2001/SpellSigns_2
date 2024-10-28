@@ -1,16 +1,6 @@
-'''
-1. mapping characters
-2. word translation
-3. sentence translation
-
-4. 
-'''
-
-
-
 import os
 import cv2
-from flask import Flask, render_template, request, url_for, send_from_directory,jsonify
+from flask import Flask, render_template, request,send_file, send_from_directory,jsonify
 from werkzeug.utils import secure_filename
 from PIL import Image
 import joblib
@@ -227,6 +217,69 @@ def handle_name(language):
 @app.route('/cross_language')
 def cross_language():
     return render_template('cross_language.html')
+
+# Convert keys to lowercase
+phonetic_mapping_lower = {
+    lang.lower(): {letter.lower(): translations for letter, translations in letters.items()}
+    for lang, letters in consts.phonetic_mapping.items()
+}
+
+
+@app.route('/get_mapping', methods=['GET'])
+def get_mapping():
+    source_language = request.args.get('sourceLanguage', '').lower()
+    target_language = request.args.get('targetLanguage', '').lower()
+    letter = request.args.get('letter', '').lower()
+
+    # print(f"Received GET request with source_language={source_language}, target_language={target_language}, letter={letter}")
+
+    # Check if the source language exists in the mapping
+    if source_language in phonetic_mapping_lower:
+        # Check if the letter exists for that language
+        if letter in phonetic_mapping_lower[source_language]:
+            letter_mapping = {lang.lower(): translation.lower() for lang, translation in phonetic_mapping_lower[source_language][letter].items()}
+            # print(f"Letter mapping found: {letter_mapping}")
+
+            # Check if target language is in the letter mapping
+            if target_language in letter_mapping:
+                # Get the mapped letter and ensure it's in lowercase
+                mapped_letter = letter_mapping[target_language]
+                # print(f"Mapped letter for target language '{target_language}': {mapped_letter}")
+                return jsonify({"letter": letter, "target_language": target_language, "mapped_letter": mapped_letter})
+            else:
+                # print(f"No mapping found for target language '{target_language}' in letter mapping.")
+                return jsonify({"message": f"No mapping found for target language '{target_language}'"})
+        else:
+            # print(f"Letter '{letter}' not found in source language '{source_language}' mapping.")
+            return jsonify({"message": f"Letter '{letter}' not found in source language '{source_language}' mapping."})
+    else:
+        # print(f"Source language '{source_language}' not found in phonetic mapping.")
+        return jsonify({"message": f"Source language '{source_language}' not found in phonetic mapping."})
+
+@app.route('/get_image', methods=['POST'])
+def get_image():
+    data = request.get_json()
+    # print(f"POST Data: {data}")  # Log the incoming POST data
+    source_language = data.get('language', '').lower()
+    letter = data.get('letter', '').lower()
+
+    # print(f"Received POST request for image with language={source_language}, letter={letter}")
+
+    # Check if the source language and letter are valid
+    
+            # mapped_letter = letter_mapping[source_language]
+
+            # Image path handling
+    char_image_path_jpg = f"static/{source_language}/{letter}.jpg"
+    char_image_path_jpeg = f"static/{source_language}/{letter}.jpeg"
+
+    if os.path.exists(char_image_path_jpg):
+        return jsonify({"image": f"/{char_image_path_jpg}"})
+    elif os.path.exists(char_image_path_jpeg):
+        return jsonify({"image": f"/{char_image_path_jpeg}"})
+    else:
+        return jsonify({"message": "No image found for the mapped letter"})
+
 
 @app.route('/sign_to_sign')
 def sign_to_sign():
