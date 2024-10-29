@@ -19,19 +19,19 @@ login("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")  # Replace with your actual token
 
 arabic_model_path = hf_hub_download(repo_id="mourasaber2001/SpellSigns", filename="arabic_model.h5",use_auth_token=True
 )
-english_model_path = hf_hub_download(repo_id="mourasaber2001/SpellSigns", filename="english_model.h5",use_auth_token=True
+american_model_path = hf_hub_download(repo_id="mourasaber2001/SpellSigns", filename="english_model.h5",use_auth_token=True
 )
 
 arabic_model = load_model(arabic_model_path)
-english_model = load_model(english_model_path)
+american_model = load_model(american_model_path)
 
 
 arabic_encoder = joblib.load("./models/arabic_encoder.pkl")
-english_encoder = joblib.load("./models/english_encoder.pkl")
+american_encoder = joblib.load("./models/english_encoder.pkl")
 
 # Dictionary mapping languages to their respective alphabets
 alphabets = {
-    'english': list('abcdefghijklmnopqrstuvwxyz'),
+    'american': list('abcdefghijklmnopqrstuvwxyz'),
     'arabic': ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي']
     # Add more languages and their alphabets here
 }
@@ -99,16 +99,16 @@ def get_model_for_language(language):
     # Replace with logic to return the appropriate model based on the language
     if language == "arabic":
         return arabic_model  # Your Arabic model
-    elif language == "english":
-        return english_model  # Your English model
+    elif language == "american":
+        return american_model  # Your English model
     # Add more languages as necessary
 
 def get_encoder_for_language(language):
     # Replace with logic to return the appropriate encoder based on the language
     if language == "arabic":
         return arabic_encoder  # Your Arabic encoder
-    elif language == "english":
-        return english_encoder  # Your English encoder
+    elif language == "american":
+        return american_encoder  # Your English encoder
     # Add more languages as necessary
 
 
@@ -116,8 +116,8 @@ def get_encoder_for_language(language):
 @app.route("/txt/<language>", methods=['GET', 'POST'])
 def classification(language):
     # Get alphabet based on the language
-    alphabet = alphabets.get(language, alphabets['english'])
-    if language not in ['arabic', 'english']:
+    alphabet = alphabets.get(language, alphabets['american'])
+    if language not in ['arabic', 'american']:
         return "Invalid language", 404
 
     if request.method == "POST":
@@ -161,15 +161,7 @@ def classification(language):
 
 @app.route("/name/<language>", methods=['GET', 'POST'])
 def handle_name(language):
-    # Print the method type
-    # print(f"Request method: {request.method}")
-
-    # Check if the request is POST
     if request.method == 'POST':
-        # print(f"Request files: {request.files}")  # Debugging line
-        # print(f"Request form: {request.form}")    # Debugging line
-
-        # Check if we're handling name or image upload
         if 'name' in request.form:  # Handle name input
             name = request.form.get("name", "").lower()  # Get name and convert to lowercase
             # Validate name input
@@ -262,14 +254,6 @@ def get_image():
     # print(f"POST Data: {data}")  # Log the incoming POST data
     source_language = data.get('language', '').lower()
     letter = data.get('letter', '').lower()
-
-    # print(f"Received POST request for image with language={source_language}, letter={letter}")
-
-    # Check if the source language and letter are valid
-    
-            # mapped_letter = letter_mapping[source_language]
-
-            # Image path handling
     char_image_path_jpg = f"static/{source_language}/{letter}.jpg"
     char_image_path_jpeg = f"static/{source_language}/{letter}.jpeg"
 
@@ -284,6 +268,69 @@ def get_image():
 @app.route('/sign_to_sign')
 def sign_to_sign():
     return render_template('sign_to_sign.html')
+
+@app.route("/sign/<source_language>", methods=['GET', 'POST'])
+def sign(source_language):
+    target_language = request.args.get('targetLanguage', '').lower()
+    if request.method == "POST":
+        # Handle image file upload
+        uploaded_file = request.files.get("image")  # Assuming the input name is "image"
+        if uploaded_file:
+            # Retrieve model and encoder for the language
+            model = get_model_for_language(source_language)  # Function to retrieve the model for the selected language
+            encoder = get_encoder_for_language(source_language)  # Function to retrieve the encoder for the selected language
+            predicted_letter = get_image_prediction(uploaded_file, model, encoder)
+            # Use the predicted letter to find its phonetic mapping
+            letter = predicted_letter.lower()
+            # Initialize mappings
+            mapped_letters = []  # To store multiple mappings if they exist
+            if source_language in phonetic_mapping_lower:
+                if letter in phonetic_mapping_lower[source_language]:
+                    letter_mapping = {lang.lower(): translation.lower() for lang, translation in phonetic_mapping_lower[source_language][letter].items()}
+                    # Check if the target language exists in the letter mapping
+                    if target_language in letter_mapping:
+                        # Get the letter mapping for the target language
+                        mapping_value = letter_mapping[target_language].strip()
+                        # Split the mapping value by '/' and filter out any empty strings
+                        if '/' in mapping_value:
+                            mapped_letters = [item.strip() for item in mapping_value.split('/') if item.strip()]
+                        else:
+                            # If it’s a single letter, just wrap it in a list
+                            mapped_letters = mapping_value
+
+
+            # If no mappings are found, you might want to handle that
+            if not mapped_letters:
+                print("No mapping")  # Default to predicted letter if no mapping found
+
+            # Fetch all possible image paths for the mapped letters
+            image_paths = []
+            for mapped_letter in mapped_letters:
+                char_image_path_jpg = f"static/{target_language}/{mapped_letter}.jpg"
+                char_image_path_jpeg = f"static/{target_language}/{mapped_letter}.jpeg"
+                if os.path.exists(char_image_path_jpg):
+                    image_paths.append(char_image_path_jpg)
+                elif os.path.exists(char_image_path_jpeg):
+                    image_paths.append(char_image_path_jpeg)
+
+
+            # Return JSON response with the predicted label and all mapped image paths
+            response_data = {
+                "predicted_label": predicted_letter,
+                "letter_mapping": mapped_letters,
+                "image_paths": image_paths
+            }
+
+            return jsonify(response_data)
+
+    # Render the full template for GET requests
+    return render_template(
+        "sign_to_sign.html",
+        show_result=False,
+        language=source_language,
+        image_paths=None
+    )
+
 
 
 

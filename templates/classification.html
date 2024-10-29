@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% block title %}{{ language|capitalize }} Sign Language Classification{% endblock title %}
 {% block content %}
+<link rel="stylesheet" href="styles.css"> <!-- Link to the CSS file -->
 <div class="container mt-5">
     <h1 class="text-center text-primary my-3">{{ language|capitalize }} Sign Language Classification</h1>
     <div class="row justify-content-center">
@@ -399,39 +400,5 @@ document.getElementById('nameForm').addEventListener('submit', function(event) {
     });
 </script>
 
-<!-- Optional Custom CSS -->
-<style>
-    /* Style for the name input card */
-    .name-input, .custom-dropdown {
-        width: 90%; /* Full width for better appearance */
-        border-radius: 50px;
-        padding: 10px;
-        font-size: 1.2rem; /* Match font size */
-    }
-    /* Add a slight hover effect for the name input */
-    .name-input:hover, .custom-dropdown:hover {
-        background-color: #f0f8ff;
-        border-color: #007bff;
-    }
-
-    #characterImages {
-    display: block; /* Change from flex to block */
-    margin: 0 auto; /* Center the container */
-}
-
-#characterImages div {
-    display: block; /* Ensures each wrapper div is a block element */
-    margin-bottom: 20px; /* Space between each title-image pair */
-}
-
-#characterImages img {
-    width: 200px; /* Set width */
-    height: 200px; /* Set height */
-    object-fit: cover; /* Maintain aspect ratio without distortion */
-    display: block; /* Ensures the image is a block element */
-    margin: 0 auto; /* Centers the image */
-}
-
-</style>
 
 {% endblock content %}
