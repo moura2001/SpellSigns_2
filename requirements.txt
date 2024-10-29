@@ -28,7 +28,7 @@ ml-dtypes
 namex
 nltk
 numpy
-opencv-python
+opencv-python-headless
 opt_einsum
 optree
 packaging
