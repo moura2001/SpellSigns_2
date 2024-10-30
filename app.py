@@ -6,7 +6,6 @@ from PIL import Image
 import joblib
 import numpy as np
 from tensorflow.keras.models import load_model
-from transformers import MarianMTModel, MarianTokenizer
 import nltk
 from nltk.tokenize import word_tokenize
 import string
