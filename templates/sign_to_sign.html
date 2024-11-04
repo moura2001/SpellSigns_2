@@ -28,7 +28,6 @@
                                     <option value="indian">Indian</option>
                                     <option value="indonesian">Indonesian</option>
                                     <option value="turkish">Turkish</option>
-                                    <option value="ukrainian">Ukrainian</option>
                                     <!-- Add more languages here -->
                                 </select>
                             </div>
@@ -54,7 +53,6 @@
                                     <option value="indian">Indian</option>
                                     <option value="indonesian">Indonesian</option>
                                     <option value="turkish">Turkish</option>
-                                    <option value="ukrainian">Ukrainian</option>
                                     <!-- Add more languages here -->
                                 </select>
                             </div>
@@ -95,7 +93,8 @@
 
 let isCameraOn = false;
 let stream;
-
+let photoTimer; // Timer variable
+const captureInterval = 5000;
 // Toggle the webcam on and off
 document.getElementById('captureToggle').addEventListener('click', () => {
     const video = document.getElementById('video');
@@ -116,6 +115,7 @@ document.getElementById('captureToggle').addEventListener('click', () => {
             stream.getTracks().forEach(track => track.stop());
         }
         isCameraOn = false;
+        clearInterval(photoTimer); // Clear the timer when turning off the camera
         document.getElementById('captureToggle').innerText = "Turn On Camera"; 
         video.srcObject = null; 
         document.getElementById('capturePhoto').style.display = "none"; 
@@ -131,11 +131,22 @@ document.getElementById('capturePhoto').addEventListener('click', () => {
     const photo = document.getElementById('photo');
 
     if (isCameraOn) {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imgData = canvas.toDataURL('image/png');
-        photo.setAttribute('src', imgData);
-        photo.style.display = "block"; 
-        document.getElementById('upload').style.display = "inline-block"; // Show upload button
+        if (photoTimer) {
+            clearInterval(photoTimer); // Stop the current timer
+            photoTimer = null; // Reset timer variable
+            document.getElementById('capturePhoto').innerText = "Take Photo"; // Change button text back
+        } else {
+            // Start the timer to capture photos at intervals
+            photoTimer = setInterval(() => {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imgData = canvas.toDataURL('image/png');
+                photo.setAttribute('src', imgData);
+                photo.style.display = "block"; 
+                document.getElementById('upload').style.display = "inline-block"; // Show upload button
+            }, captureInterval); // Take photo every 5 seconds
+
+            document.getElementById('capturePhoto').innerText = "Stop Taking Photos"; // Change button text
+        } // Show upload button
     }
 });
 // Upload captured photo for prediction
