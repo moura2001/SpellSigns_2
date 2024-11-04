@@ -28,7 +28,6 @@
                                     <option value="indian">Indian</option>
                                     <option value="indonesian">Indonesian</option>
                                     <option value="turkish">Turkish</option>
-                                    <option value="ukrainian">Ukrainian</option>
                                     <!-- Add more languages here -->
                                 </select>
                             </div>
@@ -76,7 +75,10 @@
     const alphabets = {
         'american': ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'],
         'arabic': ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'],
-        // Add more languages and their alphabets here
+        'indian': ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'],
+        'indonesian': ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'],
+        'turkish': ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'u', 'v', 'y', 'z'],
+
     };
 
     function updateAlphabet() {
@@ -185,7 +187,7 @@ function fetchImage(language, letter, langContainer) {
 function submitSelection() {
     const sourceLanguage = document.getElementById('sourceLanguageDropdown').value;
     const selectedLetter = document.getElementById('alphabetDropdownSelect').value;
-    const targetLanguages = ['American', 'Arabic', 'Indian', 'Indonesian','Turkish','Ukrainian'];
+    const targetLanguages = ['American', 'Arabic', 'Indian', 'Indonesian','Turkish'];
 
     if (sourceLanguage && selectedLetter) {
         // Fetch mappings for all target languages
