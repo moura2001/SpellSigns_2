@@ -6,13 +6,15 @@ from PIL import Image
 import joblib
 import numpy as np
 from tensorflow.keras.models import load_model
+from transformers import MarianMTModel, MarianTokenizer
 import nltk
 from nltk.tokenize import word_tokenize
-import string
 from collections import namedtuple
 import consts
 from huggingface_hub import login, hf_hub_download
 import tensorflow as tf
+import base64
+from typing import Tuple
 
 login("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")  # Replace with your actual token
 
@@ -20,19 +22,32 @@ arabic_model_path = hf_hub_download(repo_id="mourasaber2001/SpellSigns", filenam
 )
 american_model_path = hf_hub_download(repo_id="mourasaber2001/SpellSigns", filename="english_model.h5",use_auth_token=True
 )
+indian_model_path = hf_hub_download(repo_id="g-magdy/indian_sign_language", filename="indian_sign_language_model.h5",use_auth_token=True
+)
+indonesian_model_path = hf_hub_download(repo_id="g-magdy/indonesian_sign_language_classifier", filename="indonesian_sign_language_classifier.h5",use_auth_token=True
+)
+turkish_model_path=hf_hub_download(repo_id="shahdsaad/tr-usl_models", filename="trsl_model_2.h5",use_auth_token=True)
+
 
 arabic_model = load_model(arabic_model_path)
 american_model = load_model(american_model_path)
-
+indian_model = load_model(indian_model_path)
+indonesian_model = load_model(indonesian_model_path)
+turkish_model = load_model(turkish_model_path)
 
 arabic_encoder = joblib.load("./models/arabic_encoder.pkl")
 american_encoder = joblib.load("./models/english_encoder.pkl")
-
+indian_encoder = joblib.load("./models/isl_onehot_encoder.pkl")
+indonesian_encoder = joblib.load("./models/bisindo_onehot_encoder.pkl")
+turkish_encoder=joblib.load("./models/tsl_onehot_encoder.pkl")
 # Dictionary mapping languages to their respective alphabets
 alphabets = {
     'american': list('abcdefghijklmnopqrstuvwxyz'),
     'arabic': ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي']
-    # Add more languages and their alphabets here
+    ,'indian': list('abcdefghijklmnopqrstuvwxyz')
+    ,'indonesian': list('abcdefghijklmnopqrstuvwxyz')
+    ,'turkish': list('abcdefghijklmnoprstuvyz')
+
 }
 
 
@@ -63,25 +78,32 @@ def get_image_prediction(file, model, encoder) -> str:
     gray_image = cv2.cvtColor(img_resized, cv2.COLOR_BGR2GRAY)
 
     # Step 2: Canny edge detection
-    edges = cv2.Canny(gray_image, 100, 200)  # You can adjust the thresholds
+    edges = cv2.Canny(gray_image, 40, 40)  # You can adjust the thresholds
 
     # Step 3: Prepare the image for prediction
-    edges_rgb = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)  # Convert edges back to 3 channels (RGB)
-    image_batch = np.expand_dims(edges_rgb, axis=0)  # Add batch dimension (shape: (1, 224, 224, 3))
+    # Convert edges to RGB format if it is grayscale
+    if len(edges.shape) == 2:  # Check if it is a grayscale image
+        edges = np.repeat(edges[:, :, np.newaxis], 3, axis=-1)  # Convert to RGB
+
+    # Add batch dimension (shape: (1, 224, 224, 3))
+    edges = np.expand_dims(edges, axis=0)
 
     # Perform prediction
-    prediction = model.predict(image_batch)
+    prediction = model.predict(edges)
     predicted_class_index = np.argmax(prediction, axis=1)  # Get the index of the class with the highest probability
 
     # One-hot encoding for inverse transformation
     predicted_class_one_hot = np.zeros((predicted_class_index.size, encoder.categories_[0].size))
     predicted_class_one_hot[np.arange(predicted_class_index.size), predicted_class_index] = 1
+
+    # Inverse transform to get the predicted class label
     predicted_class_label = encoder.inverse_transform(predicted_class_one_hot)[0][0]
+
     # Convert predicted_class_label to string if it's not already
     if isinstance(predicted_class_label, np.ndarray):
-        predicted_class_label = predicted_class_label.item()  # Convert to a single string if it's an array
-
-    return str(predicted_class_label)  # Ensure return types are str and bool
+        predicted_class_label = predicted_class_label.item()  # Convert to a single string if it's an array    
+    return str(predicted_class_label).lower()
+  # Ensure return types are str and bool
 
 
 
@@ -100,15 +122,24 @@ def get_model_for_language(language):
         return arabic_model  # Your Arabic model
     elif language == "american":
         return american_model  # Your English model
-    # Add more languages as necessary
-
+    elif language == "indian":
+            return indian_model
+    elif language == "indonesian":
+        return indonesian_model
+    elif language == "turkish":
+        return turkish_model
 def get_encoder_for_language(language):
     # Replace with logic to return the appropriate encoder based on the language
     if language == "arabic":
         return arabic_encoder  # Your Arabic encoder
     elif language == "american":
         return american_encoder  # Your English encoder
-    # Add more languages as necessary
+    elif language == "indian":
+        return indian_encoder
+    elif language == "indonesian":
+        return indonesian_encoder
+    elif language == "turkish":
+        return turkish_encoder
 
 
                 
@@ -116,8 +147,6 @@ def get_encoder_for_language(language):
 def classification(language):
     # Get alphabet based on the language
     alphabet = alphabets.get(language, alphabets['american'])
-    if language not in ['arabic', 'american']:
-        return "Invalid language", 404
 
     if request.method == "POST":
         # Handle the selected letter from the form
@@ -142,11 +171,12 @@ def classification(language):
             encoder = get_encoder_for_language(language)  # Function to retrieve the encoder for the selected language
 
             # Call the get_image_prediction function
-            predicted_label= get_image_prediction(uploaded_file, model, encoder)
+            predicted_label = get_image_prediction(uploaded_file, model, encoder)
 
             # Return JSON response with prediction result
-            return jsonify({"predicted_label": predicted_label})
-
+            return jsonify({
+                            "predicted_label": predicted_label
+                        })
     # Render the full template for GET requests
     return render_template(
         "classification.html",
