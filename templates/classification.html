@@ -111,6 +111,8 @@
             // Create Image Element
             const imgElement = document.createElement("img");
             imgElement.src = data.image_path; // Set the source to the returned image path
+            imgElement.style.height = '500px'; // Set a specific width for images
+            imgElement.style.width = '500px'; // Set a specific width for images
             imgElement.alt = `Sign language for ${data.selected_letter}`; // Alt text for accessibility
             imgElement.className = "img-fluid"; // Add any desired classes for styling
 
@@ -137,7 +139,8 @@ document.getElementById("resetLetterButton").addEventListener("click", function(
 let isCameraOn = false;
 let stream;
 const selectedLanguage = "{{ language }}";  // Use Jinja2 to insert the language
-
+let photoTimer; // Timer variable
+const captureInterval = 5000;
 // Show camera section when the learn button is clicked
 document.getElementById('learnButton').addEventListener('click', () => {
     const cameraSection = document.getElementById('cameraSection');
@@ -164,6 +167,7 @@ document.getElementById('captureToggle').addEventListener('click', () => {
             stream.getTracks().forEach(track => track.stop());
         }
         isCameraOn = false;
+        clearInterval(photoTimer); // Clear the timer when turning off the camera
         document.getElementById('captureToggle').innerText = "Turn On Camera"; 
         video.srcObject = null; 
         document.getElementById('capturePhoto').style.display = "none"; 
@@ -171,7 +175,7 @@ document.getElementById('captureToggle').addEventListener('click', () => {
     }
 });
 
-// Capture photo from the webcam
+// Capture photo from the webcam or retake if clicked again
 document.getElementById('capturePhoto').addEventListener('click', () => {
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
@@ -179,11 +183,23 @@ document.getElementById('capturePhoto').addEventListener('click', () => {
     const photo = document.getElementById('photo');
 
     if (isCameraOn) {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imgData = canvas.toDataURL('image/png');
-        photo.setAttribute('src', imgData);
-        photo.style.display = "block"; 
-        document.getElementById('upload').style.display = "inline-block"; // Show upload button
+        // If photoTimer is already running, clear it
+        if (photoTimer) {
+            clearInterval(photoTimer); // Stop the current timer
+            photoTimer = null; // Reset timer variable
+            document.getElementById('capturePhoto').innerText = "Take Photo"; // Change button text back
+        } else {
+            // Start the timer to capture photos at intervals
+            photoTimer = setInterval(() => {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imgData = canvas.toDataURL('image/png');
+                photo.setAttribute('src', imgData);
+                photo.style.display = "block"; 
+                document.getElementById('upload').style.display = "inline-block"; // Show upload button
+            }, captureInterval); // Take photo every 5 seconds
+
+            document.getElementById('capturePhoto').innerText = "Stop Taking Photos"; // Change button text
+        }
     }
 });
 // Upload captured photo for prediction
@@ -208,11 +224,13 @@ document.getElementById('upload').addEventListener('click', () => {
             return response.json();
         })
         .then(data => {
+        
             const predictionResult = document.getElementById('predictionResult');
             // Alert the predicted label and selected letter for debugging
             const isCorrect = data.predicted_label.trim() === selectedLetter.trim(); // Compare predicted label with selected letter
             predictionResult.innerText = `Prediction: ${data.predicted_label}, Status: ${isCorrect ? 'Correct' : 'Not Correct'}`;
             predictionResult.style.display = "block"; 
+
         })
         .catch(error => console.error('Error uploading photo:', error));
     }, 'image/png');
@@ -285,7 +303,8 @@ document.getElementById('nameForm').addEventListener('submit', function(event) {
 
                 let isCameraOn = false;
                 let stream; // Move the stream declaration here
-
+                let photoTimer; // Timer variable
+                const captureInterval = 5000;
                 // Add an event listener for the "Learn" button
                 learnButton.addEventListener('click', () => {
                     // Hide any other camera sections
@@ -314,13 +333,14 @@ document.getElementById('nameForm').addEventListener('submit', function(event) {
                                 });
                         } else {
                             if (stream) {
-                                stream.getTracks().forEach(track => track.stop());
-                            }
-                            isCameraOn = false;
-                            toggleButton.innerText = "Turn On Camera"; 
-                            video.srcObject = null; 
-                            document.getElementById(`capturePhoto${letter}`).style.display = "none"; 
-                            document.getElementById(`upload${letter}`).style.display = "none"; // Hide upload button
+            stream.getTracks().forEach(track => track.stop());
+        }
+        isCameraOn = false;
+        clearInterval(photoTimer); // Clear the timer when turning off the camera
+        document.getElementById(`captureToggle${letter}`).innerText = "Turn On Camera"; 
+        video.srcObject = null; 
+        document.getElementById(`capturePhoto${letter}`).style.display = "none"; 
+        document.getElementById(`upload${letter}`).style.display = "none"; // Hide upload button
                         }
                     });
 
@@ -334,13 +354,24 @@ document.getElementById('nameForm').addEventListener('submit', function(event) {
                         photo.style.width = "600px"; // Adjusted to make the uploaded photo larger
                         photo.style.height = "480px"
                         if (isCameraOn) {
-                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                            const imgData = canvas.toDataURL('image/png');
+                            // If photoTimer is already running, clear it
+        if (photoTimer) {
+            clearInterval(photoTimer); // Stop the current timer
+            photoTimer = null; // Reset timer variable
+            document.getElementById(`capturePhoto${letter}`).innerText = "Take Photo"; // Change button text back
+        } else {
+            // Start the timer to capture photos at intervals
+            photoTimer = setInterval(() => {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imgData = canvas.toDataURL('image/png');
+                photo.setAttribute('src', imgData);
+                photo.style.display = "block"; 
+                document.getElementById(`upload${letter}`).style.display = "inline-block"; // Show upload button
+            }, captureInterval); // Take photo every 5 seconds
 
-                            photo.setAttribute('src', imgData);
-                            photo.style.display = "block"; 
-                            document.getElementById(`upload${letter}`).style.display = "inline-block"; 
-                        }
+            document.getElementById(`capturePhoto${letter}`).innerText = "Stop Taking Photos"; // Change button text
+        }
+                            }
                     });
 
                     // Upload captured photo for prediction
